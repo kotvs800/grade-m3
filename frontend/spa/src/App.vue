@@ -39,7 +39,6 @@ export default {
   },
   methods: {
     initCar() {
-      console.log(this.car);
       this.car.brand = 'MMC';
       this.car.model = 'Pajero Evolution';
       this.car.year = 1997;

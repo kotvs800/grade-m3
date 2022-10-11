@@ -1,15 +1,6 @@
 version: '3'
 
 services:
-#  application:
-#    container_name: application
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    ports:
-#      - '3000:3000'
-#    command:
-#      - /bin/bash -c "npm run serve"
   nodejs:
     container_name: nodejs
     image: node:18.10.0-slim
