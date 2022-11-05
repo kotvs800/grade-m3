@@ -1,0 +1,40 @@
+select parser
+         , start_parsed_at
+         , completed_at
+         , time_processing
+         , round(avg(time_processing) OVER (PARTITION BY parser))
+         , max(time_processing) OVER (PARTITION BY parser)
+         , min(time_processing) OVER (PARTITION BY parser)
+         , first_value(time_processing) over (PARTITION BY parser)
+         , last_value(time_processing) over (PARTITION BY parser)
+         , lag(time_processing) over (PARTITION BY parser) as prev_value
+         , lead(time_processing) over (PARTITION BY parser) as next_value
+from (
+                  select parser,
+                         start_parsed_at,
+                         completed_at,
+                         EXTRACT(epoch FROM (completed_at - start_parsed_at)) as time_processing
+                  from viner.public.parser_tasks
+                  where created_at > '2022-10-26 00:00:00'
+                  and source = 'insurance'
+                  and parser in ('osago-status', 'osago')
+                  and completed_at is not null
+                  and EXTRACT(epoch FROM (completed_at - start_parsed_at)) > 10
+                  ORDER BY created_at DESC
+              ) as results
+ORDER BY time_processing DESC;
+
+parser,         start_parsed_at,        completed_at,           time_processing,    round,  max,    min,    first_value,    last_value, prev_value, next_value
+osago-status,   2022-10-30 22:23:11,    2022-10-30 22:27:04,    233,                29,     233,    11,     38,             29,         18,         12
+osago,          2022-10-28 12:36:43,    2022-10-28 12:40:27,    224,                25,     224,    11,     17,             32,         20,         18
+osago-status,   2022-10-31 13:31:43,    2022-10-31 13:34:59,    196,                29,     233,    11,     38,             29,         16,         32
+osago,          2022-10-28 13:05:03,    2022-10-28 13:08:03,    180,                25,     224,    11,     17,             32,         74,         39
+osago-status,   2022-11-04 15:37:20,    2022-11-04 15:40:15,    175,                29,     233,    11,     38,             29,         33,         26
+osago-status,   2022-11-03 16:15:36,    2022-11-03 16:18:30,    174,                29,     233,    11,     38,             29,         23,         35
+osago,          2022-11-05 13:00:32,    2022-11-05 13:03:26,    174,                25,     224,    11,     17,             32,         17,         23
+osago-status,   2022-11-04 13:17:42,    2022-11-04 13:20:36,    174,                29,     233,    11,     38,             29,         36,         28
+osago,          2022-10-26 23:49:48,    2022-10-26 23:52:39,    171,                25,     224,    11,     17,             32,         35,         17
+osago-status,   2022-10-28 22:33:42,    2022-10-28 22:36:29,    167,                29,     233,    11,     38,             29,         99,         21
+
+
+
