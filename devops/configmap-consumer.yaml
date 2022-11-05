@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer-config
+  labels:
+    tier: backend
+data:
+  config: |
+    [supervisord]
+    nodaemon=true
+    user=root
+
+    [unix_http_server]
+    file=/run/supervisord.sock
+    chmod=0700
+
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+    [supervisorctl]
+    serverurl=unix:///run/supervisord.sock
+
+    [program:consume]
+    command=sh /consumer/consumer-start.sh
+    directory=/usr/src/myapp
+    autostart=true
+    autorestart=unexpected
+    exitcodes=37
+    # Your user
+    user=www-data
+    killasgroup=true
+    stopasgroup=true
+    # Number of consumers to run. We use a high number because we are bound by network IO
+    numprocs=%(ENV_NUM_CONSUMERS_PROCS)s
+    process_name=%(program_name)s_%(process_num)02d
+    stdout_logfile=/dev/stdout
+    stdout_logfile_maxbytes=0
+    stderr_logfile=/dev/stderr
+    stderr_logfile_maxbytes=0
+  start: |
+    if [ -f "/tmp/debricked-stop-work.txt" ]; then
+    rm -rf /tmp/debricked-stop-work.txt
+    exit 37
+    else
+    php bin/console messenger:consume --time-limit=600 --memory-limit=100M -b messenger.bus.commands -- $RECEIVERS
+    fi
+  stop: |
+      touch /tmp/debricked-stop-work.txt
+      chown www-data:www-data /tmp/debricked-stop-work.txt
+      # Tell workers to stop
+      php bin/console messenger:stop-workers --env=prod
+      # Wait until file has been deleted
+      until [ ! -f /tmp/debricked-stop-work.txt ]
+      do
+          echo "Stop file still exists"
+          sleep 5
+      done
+
+      echo "Stop file found, exiting"
